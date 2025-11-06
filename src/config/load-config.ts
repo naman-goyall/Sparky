@@ -23,6 +23,10 @@ export function loadConfig(): AgentConfig {
   const canvasDomain = process.env.CANVAS_DOMAIN;
   const canvasAccessToken = process.env.CANVAS_ACCESS_TOKEN;
 
+  // Load Notion config if available
+  const notionApiKey = process.env.NOTION_API_KEY;
+  const notionDatabaseId = process.env.NOTION_DATABASE_ID;
+
   const config: AgentConfig = {
     anthropic: {
       apiKey,
@@ -41,6 +45,14 @@ export function loadConfig(): AgentConfig {
     logger.info('Canvas configuration loaded from environment');
   }
 
+  // Add Notion config if both API key and database ID are provided
+  if (notionApiKey && notionDatabaseId) {
+    config.notion = {
+      apiKey: notionApiKey,
+      databaseId: notionDatabaseId,
+    };
+    logger.info('Notion calendar configuration loaded from environment');
+  }
+
   return config;
 }
-

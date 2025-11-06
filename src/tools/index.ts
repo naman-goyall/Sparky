@@ -10,6 +10,7 @@ import { generatePatchTool } from './code/generate-patch.js';
 import { bashTool } from './system/bash.js';
 import { webSearchTool } from './system/web-search.js';
 import { canvasTool } from './student/canvas.js';
+import { notionCalendarTool } from './student/notion-calendar.js';
 
 export function createToolRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -32,9 +33,9 @@ export function createToolRegistry(): ToolRegistry {
 
   // Register student tools
   registry.register(canvasTool);
+  registry.register(notionCalendarTool);
 
   return registry;
 }
 
 export { ToolRegistry };
-
