@@ -8,6 +8,7 @@ import type { AgentConfig } from '../types/config.js';
 import { createToolRegistry } from '../tools/index.js';
 import { setCanvasConfig } from '../tools/student/canvas.js';
 import { setNotionConfig } from '../tools/student/notion-calendar.js';
+import { setNotionNotesConfig } from '../tools/student/notion-notes.js';
 
 export function createProgram(config: AgentConfig) {
   const program = new Command();
@@ -32,7 +33,8 @@ export function createProgram(config: AgentConfig) {
         // Initialize Notion config if available
         if (config.notion) {
           setNotionConfig(config.notion);
-          logger.info('Notion calendar integration enabled');
+          setNotionNotesConfig({ apiKey: config.notion.apiKey });
+          logger.info('Notion calendar and notes integration enabled');
         }
 
         const toolRegistry = createToolRegistry();
@@ -65,6 +67,7 @@ export function createProgram(config: AgentConfig) {
         // Initialize Notion config if available
         if (config.notion) {
           setNotionConfig(config.notion);
+          setNotionNotesConfig({ apiKey: config.notion.apiKey });
         }
 
         const toolRegistry = createToolRegistry();

@@ -15,8 +15,11 @@ AI coding assistant for students built with Claude Sonnet 4.5
   - Execute bash commands
   - Search the web (DuckDuckGo)
 - 🔧 Agentic tool calling (agent can use multiple tools per conversation)
-- 🎓 Student-focused features
-- 📚 Coming soon: Code editing, patches, Canvas integration, todo management
+- 🎓 **Student-Focused Tools**
+  - Canvas LMS integration
+  - Notion Calendar & Notes integration
+  - DeepWiki for understanding open source repos
+  - Todo management (coming soon)
 
 ## Setup
 
@@ -54,6 +57,23 @@ Ask a single question:
 school-agent run "How do I create a React component?"
 ```
 
+### Using DeepWiki
+
+Ask the agent to help you understand any public GitHub repository:
+
+```bash
+# Get documentation structure
+"Show me the documentation structure for facebook/react using DeepWiki"
+
+# Ask specific questions
+"Using DeepWiki, explain how React hooks work internally"
+
+# Get full documentation
+"Get the complete documentation for expressjs/express using DeepWiki"
+```
+
+See [DEEPWIKI_SETUP.md](./DEEPWIKI_SETUP.md) for detailed usage guide.
+
 ## Development Status
 
 **Phase 1: ✅ Complete** - Foundation and terminal UI
@@ -77,10 +97,12 @@ school-agent run "How do I create a React component?"
 - ✅ Search the web
 - ✅ Agentic tool calling (10 tools available)
 
-**Coming soon (Phase 6):**
-- Canvas LMS integration
-- Todo management
-- GitHub documentation (DeepWiki)
+**Phase 6: ✅ Complete** - Student-specific tools
+- ✅ Canvas LMS integration
+- ✅ Notion Calendar integration
+- ✅ Notion Notes integration
+- ✅ DeepWiki (GitHub repository documentation)
+- ⏳ Todo management (coming soon)
 
 ## Requirements
 

@@ -11,6 +11,8 @@ import { bashTool } from './system/bash.js';
 import { webSearchTool } from './system/web-search.js';
 import { canvasTool } from './student/canvas.js';
 import { notionCalendarTool } from './student/notion-calendar.js';
+import { notionNotesTool } from './student/notion-notes.js';
+import { deepwikiTool } from './student/deepwiki.js';
 
 export function createToolRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -34,6 +36,8 @@ export function createToolRegistry(): ToolRegistry {
   // Register student tools
   registry.register(canvasTool);
   registry.register(notionCalendarTool);
+  registry.register(notionNotesTool);
+  registry.register(deepwikiTool);
 
   return registry;
 }

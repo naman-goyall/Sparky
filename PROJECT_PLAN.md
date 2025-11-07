@@ -798,61 +798,90 @@ class CanvasClient {
 }
 ```
 
-### 6.3 DeepWiki Integration (GitHub Repos)
+### 6.3 DeepWiki Integration (GitHub Repos) ✅ IMPLEMENTED
 **Objective**: Get documentation for open-source projects
+
+**Status**: ✅ **COMPLETED** - DeepWiki MCP integration fully implemented
+
+**Implementation**: `src/tools/student/deepwiki.ts`
+
+The DeepWiki tool provides comprehensive repository understanding through the DeepWiki MCP server:
 
 ```typescript
 // src/tools/student/deepwiki.ts
 export const deepwikiTool: Tool = {
   name: 'deepwiki',
-  description: 'Get documentation for GitHub repositories',
+  description: 'Access comprehensive documentation and understanding for GitHub repositories',
   inputSchema: z.object({
-    repo: z.string(), // format: "owner/repo"
-    query: z.string().optional()
+    action: z.enum(['read_wiki_structure', 'read_wiki_contents', 'ask_question']),
+    repo_name: z.string(), // format: "owner/repo"
+    question: z.string().optional()
   }),
-  execute: async (params) => {
-    // Fetch from GitHub API
-    // Parse README and docs
-    // Return relevant sections
-  }
+  execute: executeDeepWiki
 };
 ```
 
-**Features**:
-- Fetch README files
-- Parse documentation structure
-- Search within documentation
-- Get example code from repo
+**Implemented Features**:
+- ✅ **Read Wiki Structure**: Get hierarchical documentation topics
+- ✅ **Read Wiki Contents**: Get full comprehensive documentation
+- ✅ **Ask Questions**: AI-powered Q&A with code citations
+- ✅ **MCP Integration**: Uses DeepWiki MCP server (https://mcp.deepwiki.com)
+- ✅ **Error Handling**: Comprehensive error handling and validation
+- ✅ **Formatted Output**: Well-structured, readable responses
 
-**Implementation**:
+**MCP Server Details**:
+- Base URL: `https://mcp.deepwiki.com`
+- Protocol: SSE (Server-Sent Events)
+- Authentication: None required for public repositories
+- Available Tools:
+  1. `read_wiki_structure` - Get documentation topics list
+  2. `read_wiki_contents` - Get full documentation
+  3. `ask_question` - AI-powered Q&A with citations
+
+**Use Cases for Students**:
+1. **Learning from Open Source**: Understand popular libraries and frameworks
+2. **Understanding Dependencies**: Learn how libraries used in projects work
+3. **Contributing to Open Source**: Understand codebase structure before contributing
+4. **Research and Assignments**: Analyze codebases for school projects
+5. **Debugging**: Understand how features work to fix issues
+
+**Documentation**:
+- ✅ `DEEPWIKI_SETUP.md` - Comprehensive setup and usage guide
+- ✅ `docs/deepwiki-tool-reference.md` - Technical reference and API docs
+
+**Example Usage**:
 ```typescript
-class GitHubDocsClient {
-  async getRepoReadme(owner: string, repo: string): Promise<string> {
-    // Use GitHub API to fetch README
-  }
-  
-  async searchDocs(
-    owner: string,
-    repo: string,
-    query: string
-  ): Promise<SearchResult[]> {
-    // Search code and docs
-  }
-  
-  async getExamples(
-    owner: string,
-    repo: string
-  ): Promise<CodeExample[]> {
-    // Find example files
-  }
+// Get documentation structure
+{
+  action: 'read_wiki_structure',
+  repo_name: 'facebook/react'
+}
+
+// Ask specific questions
+{
+  action: 'ask_question',
+  repo_name: 'expressjs/express',
+  question: 'How does middleware work?'
+}
+
+// Read full documentation
+{
+  action: 'read_wiki_contents',
+  repo_name: 'nestjs/nest'
 }
 ```
 
+**Supported Repositories**:
+- All public GitHub repositories
+- Popular open source projects (React, Vue, Express, Django, etc.)
+- Any repository with code and documentation
+
 **Testing**:
-- Test todo CRUD operations
-- Test Canvas API integration (with test account)
-- Test deepwiki with popular repos
-- Verify authentication flows
+- ✅ Tool structure and schema validation
+- ✅ MCP integration architecture
+- ✅ Error handling for invalid repos
+- ✅ Response formatting
+- ⏳ Live testing with popular repos (pending)
 
 ---
 
