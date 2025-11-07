@@ -20,6 +20,10 @@ AI coding assistant for students built with Claude Sonnet 4.5
   - Notion Calendar & Notes integration
   - DeepWiki for understanding open source repos
   - Todo management (coming soon)
+- 📊 **Action Logging** (Always On)
+  - Automatic logging to log.json for full observability
+  - Track all agent actions, tool uses, and results
+  - Automatic cleanup by size/age
 
 ## Setup
 
@@ -73,6 +77,19 @@ Ask the agent to help you understand any public GitHub repository:
 ```
 
 See [DEEPWIKI_SETUP.md](./DEEPWIKI_SETUP.md) for detailed usage guide.
+
+### Action Logging
+
+The agent automatically logs all actions to `log.json` for full observability:
+
+- User messages
+- Assistant responses  
+- Tool uses and results
+- Errors and stack traces
+
+Automatic cleanup keeps the file under 10MB and removes sessions older than 7 days.
+
+See [ACTION_LOGGING.md](./ACTION_LOGGING.md) for complete documentation.
 
 ## Development Status
 

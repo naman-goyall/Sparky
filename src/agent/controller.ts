@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/messages.js';
 import { ConversationManager } from './conversation.js';
 import { logger } from '../utils/logger.js';
+import { actionLogger } from '../utils/action-logger.js';
 import type { AgentConfig } from '../types/config.js';
 import type { ToolRegistry } from '../tools/registry.js';
 
@@ -147,6 +148,12 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
 
   async *chat(userMessage: string): AsyncGenerator<StreamChunk> {
     try {
+      // Start logging session
+      await actionLogger.startSession();
+      
+      // Log user message
+      actionLogger.logUserMessage(userMessage);
+      
       // Add user message to conversation
       this.conversation.addMessage({
         role: 'user',
@@ -198,6 +205,9 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
           }
         }
 
+        // Log assistant response
+        actionLogger.logAssistantResponse(response.content);
+        
         // Add assistant response to conversation
         this.conversation.addMessage({
           role: 'assistant',
@@ -210,6 +220,9 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
 
           for (const toolUse of toolUses) {
             logger.debug(`Executing tool: ${toolUse.name}`, toolUse.input as object);
+            
+            // Log tool use
+            actionLogger.logToolUse(toolUse.name, toolUse.input);
 
             try {
               const result = await this.toolRegistry.executeTool(toolUse.name, toolUse.input);
@@ -217,6 +230,9 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
               const resultText = result.success
                 ? result.output || 'Success'
                 : `Error: ${result.error}`;
+              
+              // Log tool result
+              actionLogger.logToolResult(toolUse.name, result, result.success);
 
               toolResults.push({
                 type: 'tool_result',
@@ -232,6 +248,9 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
             } catch (error) {
               const errorMsg = error instanceof Error ? error.message : 'Unknown error';
               logger.error(error as Error, `Tool execution failed: ${toolUse.name}`);
+              
+              // Log tool error
+              actionLogger.logError(error as Error, `Tool execution: ${toolUse.name}`);
 
               toolResults.push({
                 type: 'tool_result',
@@ -270,6 +289,9 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
       yield {
         type: 'done',
       };
+      
+      // End logging session
+      await actionLogger.endSession();
 
       logger.debug('Conversation complete', {
         iterations: iterationCount,
@@ -277,6 +299,9 @@ Use edit_file or search_replace to make precise changes and show diffs. Use gene
       });
     } catch (error) {
       logger.error(error as Error, 'Chat error');
+      actionLogger.logError(error as Error, 'Chat error');
+      await actionLogger.endSession();
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       yield {
         type: 'error',
