@@ -6,6 +6,7 @@ AI coding assistant for students built with Claude Sonnet 4.5
 
 - 🤖 Powered by Claude Sonnet 4.5
 - 💬 Interactive terminal UI with streaming responses
+- ⚡ **Slash Commands** - Quick commands for session control (`/clear`, `/exit`, `/help`)
 - 📁 **File System Tools**
   - Browse project directories
   - Read files with line numbers
@@ -60,6 +61,24 @@ Ask a single question:
 ```bash
 school-agent run "How do I create a React component?"
 ```
+
+### Slash Commands
+
+Control your chat session with built-in commands. Type `/` to see autocomplete suggestions:
+
+```bash
+/help    # Show available commands
+/clear   # Clear conversation history
+/exit    # Exit the chat (or /quit, /q)
+```
+
+**Autocomplete Navigation:**
+- ↑/↓ arrows to navigate suggestions
+- Tab or Enter to select (stays in input, does NOT execute)
+- Esc to cancel
+- Then press Enter again to execute the command
+
+See [SLASH_COMMANDS.md](./SLASH_COMMANDS.md) for complete documentation.
 
 ### Using DeepWiki
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text, useInput, useApp, Static } from 'ink';
 import type { AgentController } from '../agent/controller.js';
+import { executeSlashCommand, type CommandContext } from './slash-commands.js';
+import { CommandSuggestions, getCommandSuggestions } from './command-suggestions.js';
 
 interface Message {
   role: 'user' | 'assistant' | 'system' | 'tool' | 'file_change';
@@ -31,28 +33,100 @@ const STARTUP_TIPS = [
   '1. Ask questions, edit files, or run commands.',
   '2. Be specific for the best results.',
   '3. The agent remembers context within your session.',
-  '4. Press Ctrl+C to exit at any time.',
+  '4. Type /help to see available commands (/clear, /exit, etc.).',
+  '5. Press Ctrl+C to exit at any time.',
 ];
 
 export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
+  const { exit } = useApp();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentToolUse, setCurrentToolUse] = useState<string | null>(null);
   const [totalTokens, setTotalTokens] = useState(0);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
 
   useInput((inputChar, key) => {
     if (isProcessing) return;
+
+    // Handle escape key to close suggestions
+    if (key.escape) {
+      if (showSuggestions) {
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(0);
+        return;
+      }
+    }
+
+    // Handle arrow keys for suggestion navigation
+    if (showSuggestions) {
+      const suggestions = getCommandSuggestions(input);
+      
+      if (key.upArrow) {
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        return;
+      }
+      
+      if (key.downArrow) {
+        setSelectedSuggestionIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      
+      // Handle tab or enter to select suggestion
+      if (key.tab || key.return) {
+        if (suggestions.length > 0) {
+          const selected = suggestions[selectedSuggestionIndex];
+          setInput(`/${selected.name}`);
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(0);
+          return;
+        }
+      }
+    }
 
     if (key.return) {
       if (input.trim()) {
         handleSubmit(input.trim());
         setInput('');
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(0);
       }
     } else if (key.backspace || key.delete) {
-      setInput(prev => prev.slice(0, -1));
+      setInput(prev => {
+        const newInput = prev.slice(0, -1);
+        
+        // Show suggestions if we're back to just '/'
+        if (newInput === '/') {
+          setShowSuggestions(true);
+          setSelectedSuggestionIndex(0);
+        } else if (newInput === '' || !newInput.startsWith('/')) {
+          // Hide suggestions if we delete the forward slash completely
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(0);
+        }
+        
+        return newInput;
+      });
     } else if (!key.ctrl && !key.meta && inputChar) {
-      setInput(prev => prev + inputChar);
+      setInput(prev => {
+        const newInput = prev + inputChar;
+        
+        // Show suggestions when user types forward slash
+        if (newInput === '/') {
+          setShowSuggestions(true);
+          setSelectedSuggestionIndex(0);
+        } else if (newInput.startsWith('/') && showSuggestions) {
+          // Reset selection when query changes
+          setSelectedSuggestionIndex(0);
+        }
+        
+        return newInput;
+      });
     }
   });
 
@@ -107,6 +181,49 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
   };
 
   const handleSubmit = async (userMessage: string) => {
+    // Check if it's a slash command
+    if (userMessage.startsWith('/')) {
+      // Show the command as a user message first
+      setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+      
+      const commandContext: CommandContext = {
+        clearMessages: () => {
+          setMessages([]);
+          agent.clearHistory();
+          setTotalTokens(0);
+        },
+        exit: () => {
+          exit();
+        },
+        getTokenCount: () => totalTokens,
+      };
+
+      const result = executeSlashCommand(userMessage, commandContext);
+      
+      if (result) {
+        if (result.type === 'exit') {
+          // Show goodbye message briefly before exiting
+          if (result.message) {
+            setMessages(prev => [...prev, { role: 'system', content: result.message || '' }]);
+          }
+          // Exit after a brief delay to show the message
+          setTimeout(() => exit(), 500);
+          return;
+        } else if (result.type === 'clear') {
+          // Clear was already executed by the command, just show confirmation
+          if (result.message) {
+            setMessages([{ role: 'system', content: result.message || '' }]);
+          }
+          return;
+        } else if (result.message) {
+          // Show command result
+          setMessages(prev => [...prev, { role: 'system', content: result.message || '' }]);
+          return;
+        }
+      }
+      return;
+    }
+
     // Add user message
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsProcessing(true);
@@ -183,8 +300,12 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
               newMessages[lastToolIndex].toolOutput = output;
             }
             
-            // Add file change notifications
-            if (fileChanges.length > 0) {
+            // Add file change notifications only for tools that don't show their own content
+            // Skip for edit_file and write_file since they show content in their bordered box
+            const toolName = chunk.toolName || '';
+            const shouldShowFileChanges = toolName !== 'edit_file' && toolName !== 'write_file';
+            
+            if (fileChanges.length > 0 && shouldShowFileChanges) {
               fileChanges.forEach(change => {
                 newMessages.push({
                   role: 'file_change',
@@ -218,21 +339,25 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
 
   return (
     <Box flexDirection="column">
-      {/* Startup Banner - Always visible */}
-      <Box flexDirection="column" marginBottom={1}>
-        <Text color="yellow" bold>
-          {SPARKY_ASCII}
-        </Text>
-        <Box marginTop={1} marginBottom={1}>
-          <Text color="#ffffff" bold>AI coding assistant for students • Powered by Claude Sonnet 4.5</Text>
-        </Box>
-        <Box flexDirection="column">
-          <Text color="#ff8800" bold>Tips for getting started:</Text>
-          {STARTUP_TIPS.map((tip, i) => (
-            <Text key={i} color="#ffffff">{tip}</Text>
-          ))}
-        </Box>
-      </Box>
+      {/* Startup Banner - Static, won't re-render */}
+      <Static items={[{ id: 'banner' }]}>
+        {(item) => (
+          <Box key={item.id} flexDirection="column" marginBottom={1}>
+            <Text color="yellow" bold>
+              {SPARKY_ASCII}
+            </Text>
+            <Box marginTop={1} marginBottom={1}>
+              <Text color="#ffffff" bold>AI coding assistant for students • Powered by Claude Sonnet 4.5</Text>
+            </Box>
+            <Box flexDirection="column">
+              <Text color="#ff8800" bold>Tips for getting started:</Text>
+              {STARTUP_TIPS.map((tip, i) => (
+                <Text key={i} color="#ffffff">{tip}</Text>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Static>
 
       {/* Messages */}
       <Box flexDirection="column" marginBottom={1}>
@@ -263,12 +388,20 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
               ) : (
                 <>
                   <Text color="yellow" bold>█</Text>
-                  <Text color="gray"> Type your message or @path/to/file</Text>
+                  <Text color="gray"> Type your message or /help for commands</Text>
                 </>
               )}
             </Box>
           )}
         </Box>
+        
+        {/* Command Suggestions - below input */}
+        {showSuggestions && input.startsWith('/') && !isProcessing && (
+          <CommandSuggestions 
+            query={input} 
+            selectedIndex={selectedSuggestionIndex}
+          />
+        )}
         
         {/* Status line below input */}
         <Box>
@@ -284,6 +417,64 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
 interface MessageDisplayProps {
   message: Message;
 }
+
+// Helper function to render file content with line numbers
+const renderFileContent = (content: string, maxLines: number = 20) => {
+  const lines = content.split('\n');
+  const displayLines = lines.slice(0, maxLines);
+  const hasMore = lines.length > maxLines;
+  
+  return (
+    <Box flexDirection="column" paddingLeft={3}>
+      {displayLines.map((line: string, idx: number) => (
+        <Box key={idx}>
+          <Text color="gray">{String(idx + 1).padStart(4, ' ')} </Text>
+          <Text color="white">{line}</Text>
+        </Box>
+      ))}
+      {hasMore && (
+        <Text color="gray">   ... ({lines.length - maxLines} more lines)</Text>
+      )}
+    </Box>
+  );
+};
+
+// Helper function to render diff content
+const renderDiff = (output: string) => {
+  // Extract diff content from the output
+  const diffMatch = output.match(/@@[\s\S]*$/m);
+  if (!diffMatch) return null;
+  
+  const diffLines = diffMatch[0].split('\n').slice(0, 30); // Limit to 30 lines
+  const hasMore = diffMatch[0].split('\n').length > 30;
+  
+  return (
+    <Box flexDirection="column" paddingLeft={3}>
+      {diffLines.map((line: string, idx: number) => {
+        let color = 'white';
+        
+        if (line.startsWith('@@')) {
+          color = 'cyan';
+        } else if (line.startsWith('+') && !line.startsWith('+++')) {
+          color = 'green';
+        } else if (line.startsWith('-') && !line.startsWith('---')) {
+          color = 'red';
+        } else if (line.startsWith('+++') || line.startsWith('---')) {
+          color = 'gray';
+        }
+        
+        return (
+          <Box key={idx}>
+            <Text color={color as any}>{line}</Text>
+          </Box>
+        );
+      })}
+      {hasMore && (
+        <Text color="gray">   ... (diff truncated)</Text>
+      )}
+    </Box>
+  );
+};
 
 const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
   const getColor = (role: string) => {
@@ -339,14 +530,32 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
             summary: `Listed ${itemCount} item(s).`,
           };
         case 'read_file':
+          // Extract file info from output
+          const filePath = toolInput?.path || 'file';
+          const sizeMatch = toolOutput?.match(/Size: ([^\n]+)/);
+          const fileSize = sizeMatch ? sizeMatch[1] : '';
+          const lineRangeMatch = toolOutput?.match(/lines (\d+)-(\d+|end)/);
+          const lineRange = lineRangeMatch ? ` (lines ${lineRangeMatch[1]}-${lineRangeMatch[2]})` : '';
+          
           return {
             name: 'ReadFile',
-            summary: toolInput?.file_path || 'Read file',
+            summary: fileSize ? `Read ${filePath}${lineRange}\nSize: ${fileSize}` : `Read ${filePath}${lineRange}`,
           };
         case 'write_file':
+          const writeFilePath = toolInput?.path || 'file';
+          const writeAction = toolOutput?.includes('Created') ? 'Created' : 'Updated';
+          const writeSizeMatch = toolOutput?.match(/(\d+) bytes/);
+          const writeSize = writeSizeMatch ? writeSizeMatch[1] : '';
           return {
             name: 'WriteFile',
-            summary: toolInput?.file_path || 'Wrote file',
+            summary: `${writeAction} ${writeFilePath}${writeSize ? ` (${writeSize} bytes)` : ''}`,
+          };
+        case 'edit_file':
+          const editFilePath = toolInput?.path || 'file';
+          const editCount = toolInput?.edits?.length || 0;
+          return {
+            name: 'EditFile',
+            summary: `Applied ${editCount} edit(s) to ${editFilePath}`,
           };
         case 'search_files':
           return {
@@ -363,6 +572,9 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
 
     const { name, summary } = getToolDisplay(message.toolName, message.toolInput, message.toolOutput);
     
+    // Split summary into lines for multi-line display
+    const summaryLines = summary.split('\n');
+    
     return (
       <Box flexDirection="column" marginBottom={1}>
         <Box borderStyle="round" borderColor="gray" paddingX={1}>
@@ -372,7 +584,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
               <Text color="white" bold>{name}</Text>
               {message.toolInput && typeof message.toolInput === 'object' && (
                 <>
-                  {('path' in message.toolInput) && (
+                  {('path' in message.toolInput) && message.toolName !== 'write_file' && message.toolName !== 'edit_file' && (
                     <Text color="gray"> {message.toolInput.path}</Text>
                   )}
                   {('command' in message.toolInput) && (
@@ -381,9 +593,25 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
                 </>
               )}
             </Box>
-            <Box paddingLeft={3}>
-              <Text color="gray">{summary}</Text>
+            <Box flexDirection="column" paddingLeft={3}>
+              {summaryLines.map((line: string, idx: number) => (
+                <Text key={idx} color="gray">{line}</Text>
+              ))}
             </Box>
+            
+            {/* Show file content for write_file */}
+            {message.toolName === 'write_file' && message.toolInput?.content && (
+              <Box flexDirection="column" marginTop={1}>
+                {renderFileContent(message.toolInput.content, 10)}
+              </Box>
+            )}
+            
+            {/* Show diff for edit_file */}
+            {message.toolName === 'edit_file' && message.toolOutput && (
+              <Box flexDirection="column" marginTop={1}>
+                {renderDiff(message.toolOutput)}
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>
