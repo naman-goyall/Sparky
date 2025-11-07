@@ -46,8 +46,10 @@ export function createProgram(config: AgentConfig) {
           toolRegistry
         );
 
-        // Render the UI
-        render(React.createElement(ChatUI, { agent }));
+        // Render the UI without clearing the screen
+        render(React.createElement(ChatUI, { agent }), {
+          patchConsole: false,
+        });
       } catch (error) {
         logger.error(error as Error, 'Failed to start chat');
         process.exit(1);

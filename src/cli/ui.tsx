@@ -18,17 +18,28 @@ interface ChatUIProps {
   agent: AgentController;
 }
 
+const SPARKY_ASCII = `
+ ███████╗██████╗  █████╗ ██████╗ ██╗  ██╗██╗   ██╗
+ ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║ ██╔╝╚██╗ ██╔╝
+ ███████╗██████╔╝███████║██████╔╝█████╔╝  ╚████╔╝ 
+ ╚════██║██╔═══╝ ██╔══██║██╔══██╗██╔═██╗   ╚██╔╝  
+ ███████║██║     ██║  ██║██║  ██║██║  ██╗   ██║   
+ ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   
+`;
+
+const STARTUP_TIPS = [
+  '1. Ask questions, edit files, or run commands.',
+  '2. Be specific for the best results.',
+  '3. The agent remembers context within your session.',
+  '4. Press Ctrl+C to exit at any time.',
+];
+
 export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'system',
-      content:
-        'Welcome to School Agent. Type your question and press Enter. Press Ctrl+C to exit.',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentToolUse, setCurrentToolUse] = useState<string | null>(null);
+  const [totalTokens, setTotalTokens] = useState(0);
 
   useInput((inputChar, key) => {
     if (isProcessing) return;
@@ -167,12 +178,9 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
               const timeMatch = result.match(/(\d+)s$/);
               newMessages[lastToolIndex].executionTime = timeMatch ? timeMatch[1] + 's' : undefined;
               
-              // Store the output for bash commands
-              if (newMessages[lastToolIndex].toolName === 'execute_bash') {
-                // Remove the execution time suffix from output
-                const output = result.replace(/\s+\d+s$/, '').trim();
-                newMessages[lastToolIndex].toolOutput = output;
-              }
+              // Store the output for all tools
+              const output = result.replace(/\s+\d+s$/, '').trim();
+              newMessages[lastToolIndex].toolOutput = output;
             }
             
             // Add file change notifications
@@ -203,20 +211,27 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
     } finally {
       setIsProcessing(false);
       setCurrentToolUse(null);
+      // Update token count after conversation
+      setTotalTokens(agent.getTokenEstimate());
     }
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
-      {/* Header */}
-      <Box borderStyle="round" borderColor="cyan" padding={1} marginBottom={1}>
-        <Text bold color="cyan">
-          School Agent
+    <Box flexDirection="column">
+      {/* Startup Banner - Always visible */}
+      <Box flexDirection="column" marginBottom={1}>
+        <Text color="yellow" bold>
+          {SPARKY_ASCII}
         </Text>
-        <Text dimColor> | </Text>
-        <Text dimColor>Claude Sonnet 4.5</Text>
-        <Text dimColor> | </Text>
-        <Text dimColor>~{agent.getTokenEstimate()} tokens</Text>
+        <Box marginTop={1} marginBottom={1}>
+          <Text color="#ffffff" bold>AI coding assistant for students • Powered by Claude Sonnet 4.5</Text>
+        </Box>
+        <Box flexDirection="column">
+          <Text color="#ff8800" bold>Tips for getting started:</Text>
+          {STARTUP_TIPS.map((tip, i) => (
+            <Text key={i} color="#ffffff">{tip}</Text>
+          ))}
+        </Box>
       </Box>
 
       {/* Messages */}
@@ -226,27 +241,42 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
         ))}
       </Box>
 
-      {/* Status indicator */}
-      {isProcessing && (
-        <Box marginBottom={1}>
-          {currentToolUse ? (
-            <Text color="yellow">Executing: {currentToolUse}...</Text>
+      {/* Input area with border */}
+      <Box flexDirection="column">
+        <Box borderStyle="round" borderColor="#ff8800" paddingX={1} marginBottom={1}>
+          {isProcessing ? (
+            <Box>
+              {currentToolUse ? (
+                <Text color="#ff8800">Executing: {currentToolUse}...</Text>
+              ) : (
+                <Text color="#ff8800">Thinking...</Text>
+              )}
+            </Box>
           ) : (
-            <Text color="yellow">Thinking...</Text>
+            <Box>
+              <Text color="#ff8800" bold>→ </Text>
+              {input.length > 0 ? (
+                <>
+                  <Text color="#ffffff">{input}</Text>
+                  <Text color="yellow" bold>█</Text>
+                </>
+              ) : (
+                <>
+                  <Text color="yellow" bold>█</Text>
+                  <Text color="gray"> Type your message or @path/to/file</Text>
+                </>
+              )}
+            </Box>
           )}
         </Box>
-      )}
-
-      {/* Input area */}
-      {!isProcessing && (
+        
+        {/* Status line below input */}
         <Box>
-          <Text color="green" bold>
-            →{' '}
-          </Text>
-          <Text>{input}</Text>
-          <Text dimColor>█</Text>
+          <Text color="white">{process.cwd()}</Text>
+          <Text color="white"> • </Text>
+          <Text color="#ff8800" bold>{totalTokens} tokens used</Text>
         </Box>
-      )}
+      </Box>
     </Box>
   );
 };
@@ -259,15 +289,15 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
   const getColor = (role: string) => {
     switch (role) {
       case 'user':
-        return 'green';
+        return '#666666';
       case 'assistant':
-        return 'white';
+        return '#ffffff';
       case 'system':
         return 'gray';
       case 'tool':
-        return 'yellow';
+        return '#ff8800';
       case 'file_change':
-        return 'green';
+        return '#ff8800';
       default:
         return 'white';
     }
@@ -276,9 +306,9 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
   const getPrefix = (role: string) => {
     switch (role) {
       case 'user':
-        return 'You: ';
+        return '> ';
       case 'assistant':
-        return 'Agent: ';
+        return '✦ ';
       case 'system':
         return '';
       case 'tool':
@@ -290,32 +320,72 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
     }
   };
 
-  // Special rendering for tool execution (bash commands)
-  if (message.role === 'tool' && message.toolName === 'execute_bash' && message.toolInput) {
-    const command = message.toolInput.command;
-    const cwd = message.toolInput.cwd || process.cwd();
+  // Special rendering for all tool executions
+  if (message.role === 'tool' && message.toolName) {
+    // Get a friendly tool name and summary
+    const getToolDisplay = (toolName: string, toolInput: any, toolOutput?: string) => {
+      switch (toolName) {
+        case 'execute_bash':
+          return {
+            name: 'ExecuteBash',
+            summary: toolInput?.command || 'Executed command',
+          };
+        case 'list_files':
+          // Try to count items from the output
+          const lines = toolOutput?.split('\n') || [];
+          const itemCount = lines.filter(l => l.trim() && !l.includes('Listed')).length;
+          return {
+            name: 'ListFiles',
+            summary: `Listed ${itemCount} item(s).`,
+          };
+        case 'read_file':
+          return {
+            name: 'ReadFile',
+            summary: toolInput?.file_path || 'Read file',
+          };
+        case 'write_file':
+          return {
+            name: 'WriteFile',
+            summary: toolInput?.file_path || 'Wrote file',
+          };
+        case 'search_files':
+          return {
+            name: 'SearchFiles',
+            summary: toolInput?.query || 'Searched files',
+          };
+        default:
+          return {
+            name: toolName,
+            summary: message.content || 'Executed',
+          };
+      }
+    };
+
+    const { name, summary } = getToolDisplay(message.toolName, message.toolInput, message.toolOutput);
     
     return (
       <Box flexDirection="column" marginBottom={1}>
-        <Box>
-          <Text dimColor>$ </Text>
-          <Text dimColor>cd "{cwd}" && {command}</Text>
-          {message.executionTime && (
-            <Text dimColor> {message.executionTime}</Text>
-          )}
-        </Box>
-        {message.toolOutput && (
-          <Box flexDirection="column" paddingLeft={2}>
-            {message.toolOutput.split('\n').slice(0, 10).map((line, idx) => (
-              <Text key={idx} dimColor>
-                {line}
-              </Text>
-            ))}
-            {message.toolOutput.split('\n').length > 10 && (
-              <Text dimColor>… truncated ({message.toolOutput.split('\n').length - 10} more lines) · ctrl+o to expand</Text>
-            )}
+        <Box borderStyle="round" borderColor="gray" paddingX={1}>
+          <Box flexDirection="column">
+            <Box>
+              <Text color="green">✓ </Text>
+              <Text color="white" bold>{name}</Text>
+              {message.toolInput && typeof message.toolInput === 'object' && (
+                <>
+                  {('path' in message.toolInput) && (
+                    <Text color="gray"> {message.toolInput.path}</Text>
+                  )}
+                  {('command' in message.toolInput) && (
+                    <Text color="gray"> {message.toolInput.command}</Text>
+                  )}
+                </>
+              )}
+            </Box>
+            <Box paddingLeft={3}>
+              <Text color="gray">{summary}</Text>
+            </Box>
           </Box>
-        )}
+        </Box>
       </Box>
     );
   }
@@ -490,11 +560,9 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box>
-        <Text bold color={getColor(message.role)}>
+        <Text color={getColor(message.role)}>
           {getPrefix(message.role)}
         </Text>
-      </Box>
-      <Box paddingLeft={2}>
         {renderMarkdownText(message.content, getColor(message.role))}
       </Box>
     </Box>
