@@ -30,10 +30,10 @@ export interface PersistedConfig {
     domain: string;
     accessToken: string;
   };
-  google?: {
-    clientId: string;
-    clientSecret: string;
-  };
+  // Note: Google OAuth credentials are app-level (not user-level)
+  // They're configured via environment variables or built-in defaults
+  // User tokens are stored separately in ~/.sparky/google-tokens.json
+  googleEnabled?: boolean; // Track if user has authorized Google Workspace
   version: string;
   createdAt: string;
   lastUpdated: string;

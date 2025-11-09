@@ -1,4 +1,6 @@
 import { config as loadEnv } from 'dotenv';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { logger } from '../utils/logger.js';
 import type { AgentConfig } from '../types/config.js';
 import { DEFAULT_CONFIG } from '../types/config.js';
@@ -6,19 +8,25 @@ import { PersistentConfigManager, ConfigError } from './persistent-config.js';
 
 /**
  * Load configuration with priority:
- * 1. Environment variables (.env) - for local development
+ * 1. Environment variables (.env) - ONLY for local development
  * 2. Persistent config (~/.sparky/config.json) - for global installation
  */
 export async function loadConfig(): Promise<AgentConfig> {
-  // Try loading from .env first (for local dev / backward compatibility)
-  loadEnv();
+  // SECURITY: Only load .env if we're in local development mode
+  // Check if we're running from source (src/ directory exists)
+  const srcDir = join(process.cwd(), 'src');
+  const packageJson = join(process.cwd(), 'package.json');
+  const isLocalDev = existsSync(srcDir) && existsSync(packageJson);
 
-  const envApiKey = process.env.ANTHROPIC_API_KEY;
-
-  // If .env has API key, use environment-based config
-  if (envApiKey) {
-    logger.info('Using configuration from .env file (local development mode)');
-    return loadConfigFromEnv(envApiKey);
+  if (isLocalDev) {
+    // Local development: load .env
+    loadEnv();
+    const envApiKey = process.env.ANTHROPIC_API_KEY;
+    
+    if (envApiKey) {
+      logger.info('Using configuration from .env file (local development mode)');
+      return loadConfigFromEnv(envApiKey);
+    }
   }
 
   // Otherwise, try loading from persistent storage
@@ -57,6 +65,16 @@ export async function loadConfig(): Promise<AgentConfig> {
  * Load configuration from environment variables
  */
 function loadConfigFromEnv(apiKey: string): AgentConfig {
+  // CRITICAL SECURITY CHECK: Prevent developer's .env from being used in production
+  // This protects against npm-linked versions using developer's API key
+  const isProductionInstall = !process.env.npm_config_global && 
+                               !process.cwd().includes('School agent') &&
+                               !process.cwd().includes('sparky');
+  
+  if (process.env.NODE_ENV !== 'development' && isProductionInstall) {
+    logger.warn('⚠️  Using .env file in production is not recommended. Run "sparky setup" instead.');
+  }
+
   // Load Canvas config if available
   const canvasDomain = process.env.CANVAS_DOMAIN;
   const canvasAccessToken = process.env.CANVAS_ACCESS_TOKEN;

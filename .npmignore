@@ -1,0 +1,41 @@
+# CRITICAL: Never publish these files to npm
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Development files
+src/
+tsconfig.json
+.prettierrc
+vitest.config.ts
+
+# Documentation (development)
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Tests
+*.test.ts
+*.test.tsx
+**/__tests__/
+
+# Logs and data
+logs/
+*.log
+log.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.tsbuildinfo
+node_modules/
