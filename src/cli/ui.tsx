@@ -25,20 +25,20 @@ interface ChatUIProps {
 }
 
 const SPARKY_ASCII = `
- ███████╗██████╗  █████╗ ██████╗ ██╗  ██╗██╗   ██╗
- ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║ ██╔╝╚██╗ ██╔╝
- ███████╗██████╔╝███████║██████╔╝█████╔╝  ╚████╔╝ 
- ╚════██║██╔═══╝ ██╔══██║██╔══██╗██╔═██╗   ╚██╔╝  
- ███████║██║     ██║  ██║██║  ██║██║  ██╗   ██║   
- ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   
+   ███████╗██████╗  █████╗ ██████╗ ██╗  ██╗██╗   ██╗
+   ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║ ██╔╝╚██╗ ██╔╝
+   ███████╗██████╔╝███████║██████╔╝█████╔╝  ╚████╔╝ 
+   ╚════██║██╔═══╝ ██╔══██║██╔══██╗██╔═██╗   ╚██╔╝  
+   ███████║██║     ██║  ██║██║  ██║██║  ██╗   ██║   
+   ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   
 `;
 
 const STARTUP_TIPS = [
-  '1. Ask questions, edit files, or run commands.',
-  '2. Be specific for the best results.',
-  '3. The agent remembers context within your session.',
-  '4. Type /help to see available commands (/clear, /exit, etc.).',
-  '5. Press Ctrl+C to exit at any time.',
+  '  • Ask questions, edit files, or run commands',
+  '  • Type @file.ts to reference files or @canvas for tools',
+  '  • Use /clear to reset, /exit to quit, /help for commands',
+  '  • The agent remembers context within your session',
+  '  • Press Ctrl+C to exit at any time',
 ];
 
 export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
@@ -517,18 +517,39 @@ export const ChatUI: React.FC<ChatUIProps> = ({ agent }) => {
       <Static items={[{ id: 'banner' }]}>
         {(item) => (
           <Box key={item.id} flexDirection="column" marginBottom={1}>
+            {/* ASCII Art Header */}
             <Text color="yellow" bold>
               {SPARKY_ASCII}
             </Text>
+            
+            {/* Subtitle */}
             <Box marginTop={1} marginBottom={1}>
-              <Text color="#ffffff" bold>AI coding assistant for students • Powered by Claude Sonnet 4.5</Text>
+              <Text color="#ffffff">Your AI coding assistant for students</Text>
+              <Text color="gray"> • </Text>
+              <Text color="cyan">Powered by Claude Sonnet 4.5</Text>
             </Box>
-            <Box flexDirection="column">
-              <Text color="#ff8800" bold>Tips for getting started:</Text>
+            
+            {/* Decorative divider */}
+            <Text color="#ff8800">{'─'.repeat(60)}</Text>
+            
+            {/* Quick Start Section */}
+            <Box flexDirection="column" marginTop={1} marginBottom={1}>
+              <Text color="yellow" bold>✨ Quick Start</Text>
               {STARTUP_TIPS.map((tip, i) => (
                 <Text key={i} color="#ffffff">{tip}</Text>
               ))}
             </Box>
+            
+            {/* Footer */}
+            <Box marginTop={1}>
+              <Text color="gray">Need help? Type </Text>
+              <Text color="#ff8800" bold>/help</Text>
+              <Text color="gray"> or visit </Text>
+              <Text color="cyan" underline>github.com/naman-goyall/Sparky</Text>
+            </Box>
+            
+            {/* Bottom divider */}
+            <Text color="#ff8800">{'─'.repeat(60)}</Text>
           </Box>
         )}
       </Static>
