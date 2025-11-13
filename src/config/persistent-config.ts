@@ -30,6 +30,7 @@ export interface PersistedConfig {
     domain: string;
     accessToken: string;
   };
+  tavilyApiKey?: string;
   // Note: Google OAuth credentials are app-level (not user-level)
   // They're configured via environment variables or built-in defaults
   // User tokens are stored separately in ~/.sparky/google-tokens.json
@@ -247,6 +248,11 @@ export class PersistentConfigManager {
         domain: config.canvas.domain,
         accessToken: config.canvas.accessToken,
       };
+    }
+
+    // Add Tavily API key if available
+    if (config.tavilyApiKey) {
+      agentConfig.tavilyApiKey = config.tavilyApiKey;
     }
 
     return agentConfig;

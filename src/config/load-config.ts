@@ -78,6 +78,9 @@ function loadConfigFromEnv(apiKey: string): AgentConfig {
   // Load Canvas config if available
   const canvasDomain = process.env.CANVAS_DOMAIN;
   const canvasAccessToken = process.env.CANVAS_ACCESS_TOKEN;
+  
+  // Load Tavily API key if available
+  const tavilyApiKey = process.env.TAVILY_API_KEY;
 
   const config: AgentConfig = {
     anthropic: {
@@ -95,6 +98,12 @@ function loadConfigFromEnv(apiKey: string): AgentConfig {
       accessToken: canvasAccessToken,
     };
     logger.info('Canvas configuration loaded from environment');
+  }
+  
+  // Add Tavily API key if provided
+  if (tavilyApiKey) {
+    config.tavilyApiKey = tavilyApiKey;
+    logger.info('Tavily API key loaded from environment');
   }
 
   return config;
