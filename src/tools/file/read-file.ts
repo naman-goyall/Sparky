@@ -22,14 +22,16 @@ async function execute(params: z.infer<typeof inputSchema>): Promise<ToolResult>
       endLine: end_line,
     });
 
-    const content = await FileUtils.readFileWithLines(absolutePath, {
+    const contentPromise = FileUtils.readFileWithLines(absolutePath, {
       startLine: start_line,
       endLine: end_line,
       addLineNumbers: add_line_numbers,
     });
 
     // Get file stats for metadata
-    const stats = await stat(absolutePath);
+    const statsPromise = stat(absolutePath);
+
+    const [content, stats] = await Promise.all([contentPromise, statsPromise]);
     const fileSize = FileUtils.formatFileSize(stats.size);
 
     const lineRange = start_line || end_line
@@ -58,4 +60,3 @@ export const readFileTool: Tool = {
   inputSchema,
   execute,
 };
-
