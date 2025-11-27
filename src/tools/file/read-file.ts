@@ -34,7 +34,7 @@ async function execute(params: z.infer<typeof inputSchema>): Promise<ToolResult>
 
     const fileSize = FileUtils.formatFileSize(stats.size);
 
-    const lineRange = start_line || end_line
+    const lineRange = (start_line || end_line) 
       ? ` (lines ${start_line || 1}-${end_line || 'end'})`
       : '';
 
