@@ -23,6 +23,15 @@ async function execute(params: z.infer<typeof inputSchema>): Promise<ToolResult>
       backup,
     });
 
+    // Create parent directories if needed
+    if (create_dirs) {
+      const dir = dirname(absolutePath);
+      if (!existsSync(dir)) {
+        await mkdir(dir, { recursive: true });
+        logger.debug(`Created directory: ${dir}`);
+      }
+    }
+
     // Check if file exists
     const fileExists = existsSync(absolutePath);
 
@@ -31,15 +40,6 @@ async function execute(params: z.infer<typeof inputSchema>): Promise<ToolResult>
       const backupPath = `${absolutePath}.bak`;
       await copyFile(absolutePath, backupPath);
       logger.debug(`Created backup: ${backupPath}`);
-    }
-
-    // Create parent directories if needed
-    if (create_dirs) {
-      const dir = dirname(absolutePath);
-      if (!existsSync(dir)) {
-        await mkdir(dir, { recursive: true });
-        logger.debug(`Created directory: ${dir}`);
-      }
     }
 
     // Write file
@@ -72,4 +72,3 @@ export const writeFileTool: Tool = {
   inputSchema,
   execute,
 };
-
