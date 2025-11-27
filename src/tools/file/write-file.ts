@@ -52,6 +52,8 @@ async function execute(params: z.infer<typeof inputSchema>): Promise<ToolResult>
     const action = fileExists ? 'Updated' : 'Created';
     const backupNote = fileExists && backup ? ' (backup created as .bak)' : '';
 
+    logger.info(`File write operation completed: ${action} file: ${path} with size: ${fileSize} bytes${backupNote}`);
+
     return {
       success: true,
       output: `${action} file: ${path}\nSize: ${fileSize} bytes${backupNote}`,
