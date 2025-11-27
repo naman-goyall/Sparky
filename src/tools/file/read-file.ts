@@ -22,7 +22,7 @@ async function execute(params: z.infer<typeof inputSchema>): Promise<ToolResult>
       endLine: end_line,
     });
 
-    // Use a single promise to read file and get stats
+    // Optimize file reading logic by using a single promise to read file and get stats
     const [content, stats] = await Promise.all([
       FileUtils.readFileWithLines(absolutePath, {
         startLine: start_line,
